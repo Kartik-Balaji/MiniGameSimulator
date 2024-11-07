@@ -402,12 +402,12 @@ class Connect4Game extends JFrame {
         // Check diagonal up-right
         if (countConsecutive(row, col, -1, 1, currentColor) >= 4) return true;
 
-        JOptionPane.showMessageDialog(this, winner + " wins!");
+
 
         // Update stats in the database
-        String winner = isPlayer1Turn ? player1Name : player2Name;
-        String loser = isPlayer1Turn ? player2Name : player1Name;
-
+        String winner = isPlayer1Turn ? GameLauncher.player1Name : GameLauncher.player2Name;
+        String loser = isPlayer1Turn ? GameLauncher.player2Name : GameLauncher.player1Name;
+        JOptionPane.showMessageDialog(this, winner + " wins!");
 
         // Update stats in the database
         DatabaseManager.updateStats(winner, "Connect 4", true);
@@ -476,8 +476,8 @@ class TicTacToeGame extends JFrame {
         board[row][col].setForeground(isPlayer1Turn ? Color.RED : Color.BLUE);
 
         if (checkWin()) {
-            String winner = isPlayer1Turn ? player1Name : player2Name;
-            String loser = isPlayer1Turn ? player2Name : player1Name;
+            String winner = isPlayer1Turn ? GameLauncher.player1Name : GameLauncher.player2Name;
+            String loser = isPlayer1Turn ? GameLauncher.player2Name : GameLauncher.player1Name;
             JOptionPane.showMessageDialog(this, "Player " + (isPlayer1Turn ? "1 (X)" : "2 (O)") + " wins!");
 
             // Update stats in the database
@@ -670,8 +670,8 @@ class UnoGame extends JFrame {
 
             // Check for win
             if (currentHand.isEmpty()) {
-                String winner = isPlayer1Turn ? player1Name : player2Name;
-                String loser = isPlayer1Turn ? player2Name : player1Name;
+                String winner = isPlayer1Turn ? GameLauncher.player1Name : GameLauncher.player2Name;
+                String loser = isPlayer1Turn ? GameLauncher.player2Name : GameLauncher.player1Name;
                 JOptionPane.showMessageDialog(this, winner + " wins!");
 
                 // Update stats in the database
