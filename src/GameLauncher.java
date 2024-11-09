@@ -78,19 +78,19 @@ class GamesMenu extends JFrame {
         JButton unoBtn = new JButton("UNO");
         JButton ticTacToeBtn = new JButton("Tic-Tac-Toe");
         JButton memoryBtn = new JButton("Memory Game");
-        JButton checkersBtn = new JButton("Checkers");
+        JButton TugOWar = new JButton("Tug of War");
 
         connect4Btn.addActionListener(e -> new Connect4Game());
         unoBtn.addActionListener(e -> new UnoGame());
         ticTacToeBtn.addActionListener(e -> new TicTacToeGame());
         memoryBtn.addActionListener(e -> new MemoryGame());
-        checkersBtn.addActionListener(e -> new CheckersGame());
+        TugOWar.addActionListener(e -> new TugOfWarGame());
 
         gamesPanel.add(connect4Btn);
         gamesPanel.add(unoBtn);
         gamesPanel.add(ticTacToeBtn);
         gamesPanel.add(memoryBtn);
-        gamesPanel.add(checkersBtn);
+        gamesPanel.add(TugOWar);
 
         // Add title panel and games panel to frame
         add(titlePanel, BorderLayout.NORTH);
@@ -154,7 +154,7 @@ class DatabaseManager {
             case "UNO" -> columnToUpdate = "uno_wins";
             case "Tic-Tac-Toe" -> columnToUpdate = "tic_tac_toe_wins";
             case "Memory Game" -> columnToUpdate = "memory_game_wins";
-            case "Checkers" -> columnToUpdate = "checkers_wins";
+            case "Checkers" -> columnToUpdate = "Tug_Of_War_wins";
             default -> {
                 System.err.println("Invalid game name: " + gameName);
                 return;
@@ -180,7 +180,7 @@ class DatabaseManager {
     public static String getPlayerStats(String player1Name, String player2Name) {
         StringBuilder stats = new StringBuilder();
         String query = "SELECT player_name, total_matches, connect4_wins, uno_wins, tic_tac_toe_wins, "
-                + "memory_game_wins, checkers_wins FROM player_stats WHERE player_name IN (?, ?)";
+                + "memory_game_wins, Tug_Of_War_wins FROM player_stats WHERE player_name IN (?, ?)";
 
         try (Connection conn = connect(); PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setString(1, player1Name);
@@ -194,7 +194,7 @@ class DatabaseManager {
                         .append("\nUNO Wins: ").append(rs.getInt("uno_wins"))
                         .append("\nTic-Tac-Toe Wins: ").append(rs.getInt("tic_tac_toe_wins"))
                         .append("\nMemory Game Wins: ").append(rs.getInt("memory_game_wins"))
-                        .append("\nCheckers Wins: ").append(rs.getInt("checkers_wins"))
+                        .append("\nTug Of War Wins: ").append(rs.getInt("Tug_Of_War_wins"))
                         .append("\n\n");
             }
         } catch (SQLException e) {
@@ -212,136 +212,84 @@ class DatabaseManager {
 
 
 
-class CheckersGame extends JFrame {
-    private static final int SIZE = 8;
-    private final JButton[][] board = new JButton[SIZE][SIZE];
-    private final Color P1_COLOR = Color.RED;
-    private final Color P2_COLOR = Color.BLACK;
-    private final Color EMPTY_COLOR = Color.WHITE;
-    private final Color HIGHLIGHT_COLOR = Color.GREEN;
-    private boolean isPlayer1Turn = true;
+ class TugOfWarGame extends JFrame {
+    private static final int MAX_POSITION = 10; // The maximum position on either side
+    private int position = 0; // The tug indicator position, starting in the center
 
-    private JButton selectedPiece = null;
+    private JLabel tugLabel;
 
-    public CheckersGame() {
-        setTitle("Checkers");
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setLayout(new GridLayout(SIZE, SIZE));
+    public TugOfWarGame() {
+        setTitle("Tug of War (Button Mashing Game)");
+        setSize(400, 200);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLayout(new BorderLayout());
 
-        initializeBoard();
 
-        setSize(800, 800);
+        tugLabel = new JLabel(getTugStatus(), SwingConstants.CENTER);
+        tugLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        add(tugLabel, BorderLayout.NORTH);
+
+
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (SwingUtilities.isLeftMouseButton(e)) {
+                    // Left-click: Player 1 action
+                    updateTugPosition(-1);
+                } else if (SwingUtilities.isRightMouseButton(e)) {
+                    // Right-click: Player 2 action
+                    updateTugPosition(1);
+                }
+            }
+        });
+
         setLocationRelativeTo(null);
         setVisible(true);
     }
 
-    private void initializeBoard() {
-        for (int row = 0; row < SIZE; row++) {
-            for (int col = 0; col < SIZE; col++) {
-                JButton button = new JButton();
-                button.setOpaque(true);
-                button.setBorderPainted(false);
-
-                // Set initial pieces
-                if ((row + col) % 2 != 0) { // Only place pieces on black squares
-                    if (row < 3) {
-                        button.setBackground(P1_COLOR);
-                    } else if (row > 4) {
-                        button.setBackground(P2_COLOR);
-                    } else {
-                        button.setBackground(EMPTY_COLOR);
-                    }
-                } else {
-                    button.setBackground(Color.LIGHT_GRAY); // Light squares
-                }
-
-                button.addActionListener(e -> handlePieceSelection(button));
-
-                board[row][col] = button;
-                add(button);
-            }
-        }
-    }
-
-    private void handlePieceSelection(JButton button) {
-        if (selectedPiece == null) {
-            if (isValidSelection(button)) {
-                selectedPiece = button;
-                button.setBackground(HIGHLIGHT_COLOR); // Highlight selected piece
-            }
-        } else {
-            if (isValidMove(selectedPiece, button)) {
-                movePiece(selectedPiece, button);
-                selectedPiece = null;
-                isPlayer1Turn = !isPlayer1Turn; // Switch turns after a valid move
+    private String getTugStatus() {
+        StringBuilder status = new StringBuilder("Player 1 ");
+        for (int i = -MAX_POSITION; i <= MAX_POSITION; i++) {
+            if (i == position) {
+                status.append("|"); // The current tug position
             } else {
-                resetSelection();
+                status.append(" ");
             }
         }
+        status.append(" Player 2");
+        return status.toString();
     }
 
-    private boolean isValidSelection(JButton button) {
-        Color pieceColor = button.getBackground();
-        return (isPlayer1Turn && pieceColor == P1_COLOR) || (!isPlayer1Turn && pieceColor == P2_COLOR);
-    }
+    private void updateTugPosition(int change) {
+        position += change;
 
-    private boolean isValidMove(JButton fromButton, JButton toButton) {
-        int[] fromPos = getPosition(fromButton);
-        int[] toPos = getPosition(toButton);
+        // Update the label
+        tugLabel.setText(getTugStatus());
 
-        if (toButton.getBackground() != EMPTY_COLOR) {
-            return false; // Target position must be empty for a move
-        }
-
-        int rowDiff = Math.abs(fromPos[0] - toPos[0]);
-        int colDiff = Math.abs(fromPos[1] - toPos[1]);
-
-        // Check for valid diagonal move (1 step) or capture (2 steps)
-        if (rowDiff == 1 && colDiff == 1) {
-            return true; // Simple move
-        } else if (rowDiff == 2 && colDiff == 2) {
-            // Capture move requires opponent piece between start and destination
-            int middleRow = (fromPos[0] + toPos[0]) / 2;
-            int middleCol = (fromPos[1] + toPos[1]) / 2;
-            Color middleColor = board[middleRow][middleCol].getBackground();
-            return (isPlayer1Turn && middleColor == P2_COLOR) || (!isPlayer1Turn && middleColor == P1_COLOR);
-        }
-        return false;
-    }
-
-    private void movePiece(JButton fromButton, JButton toButton) {
-        Color pieceColor = fromButton.getBackground();
-        fromButton.setBackground(EMPTY_COLOR);
-        toButton.setBackground(pieceColor);
-
-        // Handle capture if it's a jump move
-        int[] fromPos = getPosition(fromButton);
-        int[] toPos = getPosition(toButton);
-        if (Math.abs(fromPos[0] - toPos[0]) == 2) {
-            int middleRow = (fromPos[0] + toPos[0]) / 2;
-            int middleCol = (fromPos[1] + toPos[1]) / 2;
-            board[middleRow][middleCol].setBackground(EMPTY_COLOR); // Capture opponent piece
-        }
-    }
-
-    private int[] getPosition(JButton button) {
-        for (int row = 0; row < SIZE; row++) {
-            for (int col = 0; col < SIZE; col++) {
-                if (board[row][col] == button) {
-                    return new int[]{row, col};
-                }
-            }
-        }
-        return null;
-    }
-
-    private void resetSelection() {
-        if (selectedPiece != null) {
-            selectedPiece.setBackground(isPlayer1Turn ? P1_COLOR : P2_COLOR);
-            selectedPiece = null;
+        // Check if a player has won
+        if (position >= MAX_POSITION) {
+            JOptionPane.showMessageDialog(this, GameLauncher.player2Name + " wins!");
+            DatabaseManager.updateStats(GameLauncher.player2Name, "TugOfWar", true);
+            DatabaseManager.updateStats(GameLauncher.player1Name, "TugOfWar", false);
+            dispose();
+        } else if (position <= -MAX_POSITION) {
+            JOptionPane.showMessageDialog(this, GameLauncher.player1Name + " wins!");
+            DatabaseManager.updateStats(GameLauncher.player1Name, "TugOfWar", true);
+            DatabaseManager.updateStats(GameLauncher.player2Name, "TugOfWar", false);
+            dispose();
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
 class Connect4Game extends JFrame {
     private static final int ROWS = 7;
     private static final int COLS = 7;
@@ -805,12 +753,20 @@ class Card {
         return color + " " + value;
     }
 }
+
+
+
+
+
+
 class MemoryGame extends JFrame {
     private static final int SIZE = 6;
     private final JButton[][] buttons = new JButton[SIZE][SIZE];
     private final String[][] tileValues = new String[SIZE][SIZE];
     private boolean isPlayer1Turn = true;
     private int flippedCount = 0;
+    private int player1Matches = 0;
+    private int player2Matches = 0;
     private JButton firstButton = null;
     private JButton secondButton = null;
 
@@ -872,9 +828,17 @@ class MemoryGame extends JFrame {
             // Matching pair found, keep both tiles revealed
             firstButton.setBackground(isPlayer1Turn ? Color.RED : Color.BLUE);
             secondButton.setBackground(isPlayer1Turn ? Color.RED : Color.BLUE);
+            if (isPlayer1Turn) {
+                player1Matches++;
+            } else {
+                player2Matches++;
+            }
             firstButton = null;
             secondButton = null;
             flippedCount = 0;
+
+            // Check if the game is won
+            checkWin();
         } else {
             // No match, flip both tiles back over
             firstButton.setText("");
@@ -891,6 +855,24 @@ class MemoryGame extends JFrame {
                     (isPlayer1Turn ? "Player 1's" : "Player 2's") + " turn");
         }
     }
+
+    private void checkWin() {
+        int totalPairs = (SIZE * SIZE) / 2;
+        int matchedPairs = player1Matches + player2Matches;
+
+        if (matchedPairs == totalPairs) {
+            String winner = (player1Matches>player2Matches) ? GameLauncher.player1Name : GameLauncher.player2Name;
+            String loser = (player1Matches>player2Matches) ? GameLauncher.player2Name : GameLauncher.player1Name;
+            JOptionPane.showMessageDialog(this, "Player " + (isPlayer1Turn ? GameLauncher.player1Name : GameLauncher.player2Name + " wins!"));
+
+            // Update stats in the database
+            DatabaseManager.updateStats(winner, "memory_game", true);
+            DatabaseManager.updateStats(loser, "memory_game", false);
+            dispose();
+        }
+    }
+
+
 
     private class TileClickListener implements ActionListener {
         private final int row;
